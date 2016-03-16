@@ -11,6 +11,14 @@
 #define GAME_RIGHT GAME_LEFT+GAME_WIDTH
 #define GAME_BOTTOM GAME_TOP+GAME_HEIGHT
 
+public class BoardSection
+{
+public:
+    static const std::string cornerIntersectionFile = "corner.tif";
+    static const std::string edgeIntersectionFile = "edge.tif";
+    static const std::string intersectionFile = "intersection.tif";
+    static const std::string stoneFile = "stone.tif";
+}
 
 int main()
 {
