@@ -13,11 +13,87 @@ const int TILE_SIZE = 50;
 #define GAME_BOTTOM GAME_TOP+GAME_HEIGHT
 
 
-static const std::string cornerIntersectionFile = "corner.tif";
-static const std::string edgeIntersectionFile = "edge.tif";
-static const std::string intersectionFile = "intersection.tif";
-static const std::string stoneFile = "stone.tif";
+const std::string cornerIntersectionFile = "corner.png";
+const std::string edgeIntersectionFile = "edge.png";
+const std::string intersectionFile = "intersection.png";
+const std::string stoneFile = "stone.png";
 
+class Tile
+{
+public:
+    sf::Sprite board;
+    int stone;  // 0 = board; 1 = black; 2 = white
+    static sf::Sprite blackStone;
+    static sf::Sprite whiteStone;
+
+    static sf::Texture cornerImg;
+    static sf::Texture edgeImg;
+    static sf::Texture intersectionImg;
+    static sf::Texture stoneImg;
+
+    Tile();
+    void setTexture(sf::Texture *tex);
+    void setPosition(int x, int y);
+    void setRotation(float angle);
+    void placeStone(int player, sf::RenderWindow *window);
+};
+
+// define static Tile members
+sf::Texture Tile::cornerImg;
+sf::Texture Tile::edgeImg;
+sf::Texture Tile::intersectionImg;
+sf::Texture Tile::stoneImg;
+
+sf::Sprite Tile::blackStone;
+sf::Sprite Tile::whiteStone;
+
+// Tile member function declarations
+Tile::Tile(void)
+{
+    this->stone = 0;
+    this->board.setOrigin(TILE_SIZE / 2, TILE_SIZE / 2);
+
+    // set textures for stones
+    Tile::blackStone.setTexture(Tile::stoneImg);
+    Tile::whiteStone.setTexture(Tile::stoneImg);
+
+    // color black stone sprite
+    Tile::blackStone.setColor(sf::Color::Black);
+
+    // set origins for stone sprites
+    Tile::blackStone.setOrigin(TILE_SIZE / 2, TILE_SIZE /2);
+    Tile::whiteStone.setOrigin(TILE_SIZE / 2, TILE_SIZE /2);
+}
+
+void Tile::setTexture(sf::Texture *tex)
+{
+    this->board.setTexture(*tex);
+}
+
+void Tile::setPosition(int x, int y)
+{
+    this->board.setPosition(x, y);
+}
+
+void Tile::setRotation(float angle)
+{
+    this->board.setRotation(angle);
+}
+
+void Tile::placeStone(int player, sf::RenderWindow *window)
+{
+    this->stone = player;
+    if(player == 1)
+    {
+        Tile::blackStone.setPosition(this->board.getPosition());
+        window->draw(Tile::blackStone);
+    }
+    else
+    {
+        Tile::whiteStone.setPosition(this->board.getPosition());
+        window->draw(Tile::whiteStone);
+    }
+}
 
 int main()
 {
@@ -27,34 +103,88 @@ int main()
     sf::Time t;
     sf::Clock clock;
 
-    sf::Image cornerImg;
-    sf::Image edgeImg;
-    sf::Image intersectionImg;
-    sf::Image stoneImg;
-
-    if(!cornerImg.loadFromFile(cornerIntersectionFile))
+    if(!Tile::cornerImg.loadFromFile(cornerIntersectionFile))
     {
         std::cout << "Failed to load corner image file\n";
         return 1;
     }
-
-    if(!edgeImg.loadFromFile(edgeIntersectionFile))
+    if(!Tile::edgeImg.loadFromFile(edgeIntersectionFile))
     {
         std::cout << "Failed to load edge image file\n";
         return 1;
     }
-    if(!intersectionImg.loadFromFile(intersectionFile))
+    if(!Tile::intersectionImg.loadFromFile(intersectionFile))
     {
         std::cout << "Failed to load intersection image file\n";
         return 1;
     }
-    if(!stoneImg.loadFromFile(stoneFile))
+    if(!Tile::stoneImg.loadFromFile(stoneFile))
     {
         std::cout << "Failed to load stone image file\n";
         return 1;
     }
 
-    sf::Sprite background[GAME_WIDTH][GAME_HEIGHT];
+    Tile game[GAME_WIDTH][GAME_HEIGHT];
+
+    window.clear();
+
+    //initialize textures and draw the board.
+    for(int i = 0; i < GAME_WIDTH; i++)
+    {
+        for(int j = 0; j < GAME_WIDTH; j++)
+        {
+            if(i == 0 && j == 0)
+            {
+                game[i][j].setTexture(&Tile::cornerImg);
+            }
+            else if(i == 0 && j == GAME_HEIGHT - 1)
+            {
+                game[i][j].setTexture(&Tile::cornerImg);
+                game[i][j].setRotation(270);
+            }
+            else if(i == GAME_WIDTH - 1 && j == 0)
+            {
+                game[i][j].setTexture(&Tile::cornerImg);
+                game[i][j].setRotation(90);
+            }
+            else if(i == GAME_WIDTH - 1 && j == GAME_HEIGHT - 1)
+            {
+                game[i][j].setTexture(&Tile::cornerImg);
+                game[i][j].setRotation(180);
+            }
+            else if (i == 0)
+            {
+                game[i][j].setTexture(&Tile::edgeImg);
+                game[i][j].setRotation(270);
+            }
+            else if (i == GAME_WIDTH - 1)
+            {
+                game[i][j].setTexture(&Tile::edgeImg);
+                game[i][j].setRotation(90);
+            }
+            else if (j == 0)
+            {
+                game[i][j].setTexture(&Tile::edgeImg);
+            }
+            else if (j == GAME_HEIGHT - 1)
+            {
+                game[i][j].setTexture(&Tile::edgeImg);
+                game[i][j].setRotation(180);
+            }
+            else
+            {
+                game[i][j].setTexture(&Tile::intersectionImg);
+            }
+
+            game[i][j].setPosition(i * TILE_SIZE + (TILE_SIZE / 2), j * TILE_SIZE + (TILE_SIZE / 2));
+            window.draw(game[i][j].board);
+        }
+    }
+
+    game[3][3].placeStone(1, &window);
+    game[15][15].placeStone(2, &window);
+
+    window.display();
 
     while (window.isOpen())
     {
@@ -75,9 +205,9 @@ int main()
             t = sf::Time::Zero;
 
             // draw
-            window.clear();
+            //window.clear();
 
-            window.display();
+            //window.display();
         }
 
     }
