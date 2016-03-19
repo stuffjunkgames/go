@@ -35,7 +35,8 @@ public:
     void setTexture(sf::Texture *tex);
     void setPosition(int x, int y);
     void setRotation(float angle);
-    void placeStone(int player, sf::RenderWindow *window);
+    void placeStone(int player);
+    void drawTile(sf::RenderWindow *window);
 };
 
 // define static Tile members
@@ -80,18 +81,35 @@ void Tile::setRotation(float angle)
     this->board.setRotation(angle);
 }
 
-void Tile::placeStone(int player, sf::RenderWindow *window)
+void Tile::placeStone(int player)
 {
     this->stone = player;
     if(player == 1)
     {
         Tile::blackStone.setPosition(this->board.getPosition());
-        window->draw(Tile::blackStone);
     }
     else
     {
         Tile::whiteStone.setPosition(this->board.getPosition());
-        window->draw(Tile::whiteStone);
+    }
+}
+
+void Tile::drawTile(sf::RenderWindow *window)
+{
+
+    window->draw(this->board);
+    if(this->stone != 0)
+    {
+        this->placeStone(this->stone);
+        if(this->stone == 1)
+        {
+            window->draw(Tile::blackStone);
+        }
+        else // this->stone == 2
+        {
+            //std::cout << "draw white stone\n";
+            window->draw(Tile::whiteStone);
+        }
     }
 }
 
@@ -102,6 +120,8 @@ int main()
     sf::Time dt;
     sf::Time t;
     sf::Clock clock;
+
+    int turn = 1;
 
     if(!Tile::cornerImg.loadFromFile(cornerIntersectionFile))
     {
@@ -177,12 +197,11 @@ int main()
             }
 
             game[i][j].setPosition(i * TILE_SIZE + (TILE_SIZE / 2), j * TILE_SIZE + (TILE_SIZE / 2));
-            window.draw(game[i][j].board);
+            game[i][j].drawTile(&window);
         }
     }
 
-    game[3][3].placeStone(1, &window);
-    game[15][15].placeStone(2, &window);
+    window.draw(Tile::blackStone);
 
     window.display();
 
@@ -194,7 +213,16 @@ int main()
             if (event.type == sf::Event::Closed)
                 window.close();
 
+            if(event.type == sf::Event::MouseButtonPressed)
+            {
+                int x = event.mouseButton.x / TILE_SIZE;
+                int y = event.mouseButton.y / TILE_SIZE;
 
+                //std::cout << x << ", " << y << ": " << (turn-1) % 2 + 1 << std::endl;
+
+                game[x][y].placeStone((turn-1) % 2 + 1);
+                turn++;
+            }
         }
 
         // movement
@@ -205,9 +233,15 @@ int main()
             t = sf::Time::Zero;
 
             // draw
-            //window.clear();
-
-            //window.display();
+            window.clear();
+            for(int i = 0; i < GAME_WIDTH; i++)
+            {
+                for(int j = 0; j < GAME_WIDTH; j++)
+                {
+                    game[i][j].drawTile(&window);
+                }
+            }
+            window.display();
         }
 
     }
