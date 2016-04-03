@@ -113,6 +113,10 @@ void Tile::drawTile(sf::RenderWindow *window)
     }
 }
 
+bool isMoveLegal(Tile game[GAME_WIDTH][GAME_HEIGHT], int player, int x, int y);
+int isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player);
+bool isCapturedHelper(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player);
+
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GAME_WIDTH * TILE_SIZE, GAME_HEIGHT * TILE_SIZE), "Go");
@@ -151,7 +155,7 @@ int main()
     //initialize textures and draw the board.
     for(int i = 0; i < GAME_WIDTH; i++)
     {
-        for(int j = 0; j < GAME_WIDTH; j++)
+        for(int j = 0; j < GAME_HEIGHT; j++)
         {
             if(i == 0 && j == 0)
             {
@@ -217,11 +221,18 @@ int main()
             {
                 int x = event.mouseButton.x / TILE_SIZE;
                 int y = event.mouseButton.y / TILE_SIZE;
+                int player = (turn-1) % 2 + 1;
 
                 //std::cout << x << ", " << y << ": " << (turn-1) % 2 + 1 << std::endl;
 
-                game[x][y].placeStone((turn-1) % 2 + 1);
-                turn++;
+                // need to check if it will capture something before determining if it is suicide
+                // put this inside isMoveLegal?
+                if(isMoveLegal(game, player, x, y))
+                {
+                    game[x][y].placeStone(player);
+                    turn++;
+                }
+
             }
         }
 
@@ -247,4 +258,71 @@ int main()
     }
 
     return 0;
+}
+
+// returns true if move at x,y is legal for player
+bool isMoveLegal(Tile game[GAME_WIDTH][GAME_HEIGHT], int player, int x, int y)
+{
+    if(game[x][y].stone != 0)
+    {
+        return 0;
+    }
+
+    int captured[GAME_WIDTH][GAME_HEIGHT] = {0};
+    int illegal = isCaptured(game, x, y, captured, player);
+
+    if(illegal == -1)
+    {
+        std::cout << "isCaptured returned an error; probably outside game area\n";
+        return 0;
+    }
+    else
+    {
+        return !illegal;
+    }
+}
+
+// return 1 if group of stone at x, y is captured, 0 if not.
+// also modifies array to indicate which stones are captured
+// captured array must be initialized to 0
+int isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player)
+{
+    // return an error if x,y is outside the playing area or not occupied
+    if(x < 0 || y < 0 || x >= GAME_WIDTH || y >= GAME_HEIGHT)
+    {
+        return -1;
+    }
+
+    captured[x][y] = 1;
+
+    return (isCapturedHelper(game, x-1, y, captured, player) && isCapturedHelper(game, x+1, y, captured, player) &&
+            isCapturedHelper(game, x, y-1, captured, player) && isCapturedHelper(game, x, y+1, captured, player));
+}
+
+bool isCapturedHelper(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player)
+{
+    if(captured[x][y] == 1)
+    {
+        return 1;
+    }
+
+    if(x < 0 || y < 0 || x >= GAME_WIDTH || y >= GAME_HEIGHT)
+    {
+        return 1;
+    }
+
+    if(game[x][y].stone == (player % 2) + 1)
+    {
+        return 1;
+    }
+
+    if(game[x][y].stone == 0)
+    {
+        return 0;
+    }
+
+    captured[x][y] = 1;
+
+    return (isCapturedHelper(game, x-1, y, captured, player) && isCapturedHelper(game, x+1, y, captured, player) &&
+            isCapturedHelper(game, x, y-1, captured, player) && isCapturedHelper(game, x, y+1, captured, player));
 }
