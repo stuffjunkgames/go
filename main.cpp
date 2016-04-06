@@ -36,6 +36,7 @@ public:
     void setPosition(int x, int y);
     void setRotation(float angle);
     void placeStone(int player);
+    void removeStone();
     void drawTile(sf::RenderWindow *window);
 };
 
@@ -84,14 +85,19 @@ void Tile::setRotation(float angle)
 void Tile::placeStone(int player)
 {
     this->stone = player;
-    if(player == 1)
-    {
-        Tile::blackStone.setPosition(this->board.getPosition());
-    }
-    else
-    {
-        Tile::whiteStone.setPosition(this->board.getPosition());
-    }
+//    if(player == 1)
+//    {
+//        Tile::blackStone.setPosition(this->board.getPosition());
+//    }
+//    else
+//    {
+//        Tile::whiteStone.setPosition(this->board.getPosition());
+//    }
+}
+
+void Tile::removeStone()
+{
+    this->stone = 0;
 }
 
 void Tile::drawTile(sf::RenderWindow *window)
@@ -103,19 +109,23 @@ void Tile::drawTile(sf::RenderWindow *window)
         this->placeStone(this->stone);
         if(this->stone == 1)
         {
+            Tile::blackStone.setPosition(this->board.getPosition());
             window->draw(Tile::blackStone);
         }
         else // this->stone == 2
         {
             //std::cout << "draw white stone\n";
+            Tile::whiteStone.setPosition(this->board.getPosition());
             window->draw(Tile::whiteStone);
         }
     }
 }
 
-bool isMoveLegal(Tile game[GAME_WIDTH][GAME_HEIGHT], int player, int x, int y);
-int isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player);
+bool makeMove(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int player);
+bool isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player);
 bool isCapturedHelper(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player);
+void zeroArray(int a[GAME_WIDTH][GAME_HEIGHT]);
+void captureStones(Tile game[GAME_WIDTH][GAME_HEIGHT], int captured[GAME_WIDTH][GAME_HEIGHT]);
 
 int main()
 {
@@ -223,13 +233,10 @@ int main()
                 int y = event.mouseButton.y / TILE_SIZE;
                 int player = (turn-1) % 2 + 1;
 
-                //std::cout << x << ", " << y << ": " << (turn-1) % 2 + 1 << std::endl;
-
                 // need to check if it will capture something before determining if it is suicide
                 // put this inside isMoveLegal?
-                if(isMoveLegal(game, player, x, y))
+                if(makeMove(game, x, y, player))
                 {
-                    game[x][y].placeStone(player);
                     turn++;
                 }
 
@@ -260,38 +267,74 @@ int main()
     return 0;
 }
 
+// adds stone to board (if legal)
+// removes any dead stones
 // returns true if move at x,y is legal for player
-bool isMoveLegal(Tile game[GAME_WIDTH][GAME_HEIGHT], int player, int x, int y)
+bool makeMove(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int player)
 {
     if(game[x][y].stone != 0)
     {
         return 0;
     }
 
+    game[x][y].placeStone(player);
     int captured[GAME_WIDTH][GAME_HEIGHT] = {0};
-    int illegal = isCaptured(game, x, y, captured, player);
 
-    if(illegal == -1)
+    bool legal = 0;
+
+    if(isCaptured(game, x+1, y, captured, (player % 2) + 1))
     {
-        std::cout << "isCaptured returned an error; probably outside game area\n";
-        return 0;
+        legal = 1;
+        captureStones(game, captured);
     }
-    else
+    zeroArray(captured);
+    if(isCaptured(game, x-1, y, captured, (player % 2) + 1))
     {
-        return !illegal;
+        legal = 1;
+        captureStones(game, captured);
     }
+    zeroArray(captured);
+    if(isCaptured(game, x, y+1, captured, (player % 2) + 1))
+    {
+        legal = 1;
+        captureStones(game, captured);
+    }
+    zeroArray(captured);
+    if(isCaptured(game, x, y-1, captured, (player % 2) + 1))
+    {
+        legal = 1;
+        captureStones(game, captured);
+    }
+    zeroArray(captured);
+
+    if(legal)
+    {
+        return 1;
+    }
+
+    legal = !isCaptured(game, x, y, captured, player);
+    if(!legal)
+    {
+        game[x][y].removeStone();
+    }
+
+    return legal;
 }
 
 // return 1 if group of stone at x, y is captured, 0 if not.
 // also modifies array to indicate which stones are captured
 // captured array must be initialized to 0
-int isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player)
+bool isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player)
 {
     // return an error if x,y is outside the playing area or not occupied
-    if(x < 0 || y < 0 || x >= GAME_WIDTH || y >= GAME_HEIGHT)
+    if(x < 0 || y < 0 || x >= GAME_WIDTH || y >= GAME_HEIGHT || game[x][y].stone != player)
     {
-        return -1;
+        return 0;
     }
+//    else if(player != game[x][y].stone)
+//    {
+//        return 0;
+//    }
 
     captured[x][y] = 1;
 
@@ -299,6 +342,7 @@ int isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GA
             isCapturedHelper(game, x, y-1, captured, player) && isCapturedHelper(game, x, y+1, captured, player));
 }
 
+// recursive helper for isCaptured
 bool isCapturedHelper(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player)
 {
     if(captured[x][y] == 1)
@@ -325,4 +369,31 @@ bool isCapturedHelper(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int capt
 
     return (isCapturedHelper(game, x-1, y, captured, player) && isCapturedHelper(game, x+1, y, captured, player) &&
             isCapturedHelper(game, x, y-1, captured, player) && isCapturedHelper(game, x, y+1, captured, player));
+}
+
+// removes stones in captured array
+void captureStones(Tile game[GAME_WIDTH][GAME_HEIGHT], int captured[GAME_WIDTH][GAME_HEIGHT])
+{
+    for(int i = 0; i < GAME_WIDTH; i++)
+    {
+        for(int j = 0; j < GAME_HEIGHT; j++)
+        {
+            if(captured[i][j] == 1)
+            {
+                game[i][j].removeStone();
+            }
+        }
+    }
+}
+
+// zeroes all elements in the array a
+void zeroArray(int a[GAME_WIDTH][GAME_HEIGHT])
+{
+    for(int i = 0; i < GAME_WIDTH; i++)
+    {
+        for(int j = 0; j < GAME_HEIGHT; j++)
+        {
+            a[i][j] = 0;
+        }
+    }
 }
