@@ -164,6 +164,7 @@ int main()
     sf::Uint16 player = 1;
     sf::Uint16 x, y;
     packet << player;
+    std::cout << "Sending to player 1\n";
     if(client1.send(packet) != sf::Socket::Done)
     {
         std::cout << "Error sending packet\n";
@@ -172,6 +173,7 @@ int main()
     packet.clear();
     player = 2;
     packet << player;
+    std::cout << "Sending to player 2\n";
     if(client2.send(packet) != sf::Socket::Done)
     {
         std::cout << "Error sending packet\n";
@@ -231,8 +233,16 @@ int main()
         std::cout << "Error receiving packet!\n";
         return 1;
     }
-    int player;
+    sf::Uint16 player;
     packet >> player;
+    if(player == 1)
+    {
+        std::cout << "You go first!\n";
+    }
+    else if(player == 2)
+    {
+        std::cout << "You go second!\n";
+    }
 
     // start the game
     sf::RenderWindow window(sf::VideoMode(GAME_WIDTH * TILE_SIZE, GAME_HEIGHT * TILE_SIZE), "Go");
@@ -327,11 +337,13 @@ int main()
 
     sf::Uint16 xMove, yMove, color;
 
+    socket.setBlocking(false);
+    std::cout << "Start!\n";
     while (window.isOpen())
     {
-        if(player == (turn % 2 + 1)) // your turn
+        sf::Event event;
+        if(player == ((turn-1) % 2) + 1) // your turn
         {
-            sf::Event event;
             while (window.pollEvent(event))
             {
                 if (event.type == sf::Event::Closed)
@@ -351,11 +363,7 @@ int main()
                         packet.clear();
                         // send move to opponent
                         packet << xMove << yMove << color;
-                        if(socket.send(packet) != sf::Socket::Done)
-                        {
-                            std::cout << "Error sending packet!\n";
-                            return 1;
-                        }
+                        socket.send(packet);
                     }
 
                 }
@@ -363,16 +371,27 @@ int main()
         }
         else // other players turn
         {
-            packet.clear();
-            if(socket.receive(packet) != sf::Socket::Done)
+            while (window.pollEvent(event))
             {
-                std::cout << "Error receiving packet!\n";
-                return 1;
-            }
-            packet >> xMove >> yMove >> color;
+                if (event.type == sf::Event::Closed)
+                    window.close();
 
-            makeMove(game, xMove, yMove, color);
-            turn++;
+                if(event.type == sf::Event::MouseButtonPressed)
+                {
+                    // ignore mouse clicks while not your turn
+
+                }
+            }
+
+            packet.clear();
+            if(socket.receive(packet) == sf::Socket::Done)
+            {
+                packet >> xMove >> yMove >> color;
+
+                makeMove(game, xMove, yMove, color);
+                turn++;
+            }
+
         }
 
         // timing
