@@ -1,6 +1,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include <SFML/Network.hpp>
 #include <cstdlib>
 #include <iostream>
 
@@ -12,7 +13,7 @@ const int TILE_SIZE = 50;
 #define GAME_RIGHT GAME_LEFT+GAME_WIDTH
 #define GAME_BOTTOM GAME_TOP+GAME_HEIGHT
 
-
+const int port = 12345;
 const std::string cornerIntersectionFile = "corner.png";
 const std::string edgeIntersectionFile = "edge.png";
 const std::string intersectionFile = "intersection.png";
@@ -129,6 +130,99 @@ void captureStones(Tile game[GAME_WIDTH][GAME_HEIGHT], int captured[GAME_WIDTH][
 
 int main()
 {
+#ifdef SERVER
+    // server code -- just pass packets through
+    sf::TcpListener listener;
+    sf::Packet packet;
+
+    // bind listener to port
+    if(listener.listen(port) != sf::Socket::Done)
+    {
+        std::cout << "Error listening to port!\n";
+        return 1;
+    }
+
+    // accept a new connection
+    sf::TcpSocket client1;
+    sf::TcpSocket client2;
+    std::cout << "Listening for client connections...\n";
+    if(listener.accept(client1) != sf::Socket::Done || listener.accept(client2) != sf::Socket::Done)
+    {
+        std::cout << "Error accepting client!\n";
+        return 1;
+    }
+
+    std::cout << "Both clients connected!\n";
+
+    int player = 1;
+    int x, y;
+    packet << player;
+    if(client1.send(packet) != sf::Socket::Done)
+    {
+        std::cout << "Error sending packet\n";
+        return 1;
+    }
+    packet.clear();
+    player = 2;
+    packet << player;
+    if(client2.send(packet) != sf::Socket::Done)
+    {
+        std::cout << "Error sending packet\n";
+        return 1;
+    }
+    packet.clear();
+
+    while(1)
+    {
+        if(client1.receive(packet) != sf::Socket::Done)
+        {
+            std::cout << "Error receiving packet\n";
+            return 1;
+        }
+        if(client2.send(packet) != sf::Socket::Done)
+        {
+            std::cout << "Error sending packet\n";
+            return 1;
+        }
+
+        packet.clear();
+        if(client2.receive(packet) != sf::Socket::Done)
+        {
+            std::cout << "Error receiving packet\n";
+            return 1;
+        }
+        if(client1.send(packet) != sf::Socket::Done)
+        {
+            std::cout << "Error sending packet\n";
+            return 1;
+        }
+
+        packet.clear();
+    }
+#endif // SERVER
+
+
+#ifndef SERVER
+    sf::TcpSocket socket;
+    sf::Socket::Status status = socket.connect("msquared169.ddns.net", port);
+    sf::Packet packet;
+    std::cout << "Connected socket\n";
+    if(status != sf::Socket::Done)
+    {
+        std::cout << "Error connecting socket!\n";
+        return 1;
+    }
+
+    // wait to see if first or second
+    if(socket.receive(packet) != sf::Socket::Done)
+    {
+        std::cout << "Error receiving packet!\n";
+        return 1;
+    }
+    int player;
+    packet >> player;
+
+    // start the game
     sf::RenderWindow window(sf::VideoMode(GAME_WIDTH * TILE_SIZE, GAME_HEIGHT * TILE_SIZE), "Go");
 
     sf::Time dt;
@@ -219,31 +313,57 @@ int main()
 
     window.display();
 
+    sf::Uint16 xMove, yMove, color;
+
     while (window.isOpen())
     {
-        sf::Event event;
-        while (window.pollEvent(event))
+        if(player == (turn % 2 + 1)) // your turn
         {
-            if (event.type == sf::Event::Closed)
-                window.close();
-
-            if(event.type == sf::Event::MouseButtonPressed)
+            sf::Event event;
+            while (window.pollEvent(event))
             {
-                int x = event.mouseButton.x / TILE_SIZE;
-                int y = event.mouseButton.y / TILE_SIZE;
-                int player = (turn-1) % 2 + 1;
+                if (event.type == sf::Event::Closed)
+                    window.close();
 
-                // need to check if it will capture something before determining if it is suicide
-                // put this inside isMoveLegal?
-                if(makeMove(game, x, y, player))
+                if(event.type == sf::Event::MouseButtonPressed)
                 {
-                    turn++;
-                }
+                    xMove = event.mouseButton.x / TILE_SIZE;
+                    yMove = event.mouseButton.y / TILE_SIZE;
+                    color = (turn-1) % 2 + 1;
 
+                    // need to check if it will capture something before determining if it is suicide
+                    // put this inside isMoveLegal?
+                    if(makeMove(game, xMove, yMove, color))
+                    {
+                        turn++;
+                        packet.clear();
+                        // send move to opponent
+                        packet << xMove << yMove << color;
+                        if(socket.send(packet) != sf::Socket::Done)
+                        {
+                            std::cout << "Error sending packet!\n";
+                            return 1;
+                        }
+                    }
+
+                }
             }
         }
+        else // other players turn
+        {
+            packet.clear();
+            if(socket.receive(packet) != sf::Socket::Done)
+            {
+                std::cout << "Error receiving packet!\n";
+                return 1;
+            }
+            packet >> xMove >> yMove >> color;
 
-        // movement
+            makeMove(game, xMove, yMove, color);
+            turn++;
+        }
+
+        // timing
         dt = clock.restart();
         t += dt;
         if(t.asMilliseconds() >= 100){
@@ -265,6 +385,7 @@ int main()
     }
 
     return 0;
+#endif // not SERVER
 }
 
 // adds stone to board (if legal)
