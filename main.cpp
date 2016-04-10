@@ -161,8 +161,8 @@ int main()
 
     std::cout << "Both clients connected!\n";
 
-    int player = 1;
-    int x, y;
+    sf::Uint16 player = 1;
+    sf::Uint16 x, y;
     packet << player;
     if(client1.send(packet) != sf::Socket::Done)
     {
@@ -191,6 +191,8 @@ int main()
             std::cout << "Error sending packet\n";
             return 1;
         }
+        player >> x >> y >> player;
+        std::cout << x << ", " << y << ", player " << player << std::endl;
 
         packet.clear();
         if(client2.receive(packet) != sf::Socket::Done)
@@ -203,6 +205,8 @@ int main()
             std::cout << "Error sending packet\n";
             return 1;
         }
+        player >> x >> y >> player;
+        std::cout << x << ", " << y << ", player " << player << std::endl;
 
         packet.clear();
     }
