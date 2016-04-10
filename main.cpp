@@ -191,7 +191,7 @@ int main()
             std::cout << "Error sending packet\n";
             return 1;
         }
-        player >> x >> y >> player;
+        packet >> x >> y >> player;
         std::cout << x << ", " << y << ", player " << player << std::endl;
 
         packet.clear();
@@ -205,7 +205,7 @@ int main()
             std::cout << "Error sending packet\n";
             return 1;
         }
-        player >> x >> y >> player;
+        packet >> x >> y >> player;
         std::cout << x << ", " << y << ", player " << player << std::endl;
 
         packet.clear();
