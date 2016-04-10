@@ -4,7 +4,7 @@ CC = g++
 CFLAGS = -Wall -c
 
 #linker options
-LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
+LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system -lsfml-network
 
 SOURCEDIR = .
 BUILDDIR = build/obj
