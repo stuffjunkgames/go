@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <iostream>
 
+/* uncomment this to use server code instead of client code */
+//#define SERVER
 #define GAME_TOP 0
 #define GAME_LEFT 0
 #define GAME_WIDTH 19
@@ -135,6 +137,7 @@ int main()
     sf::TcpListener listener;
     sf::Packet packet;
 
+    std::cout << "Binding listener to port " << port << std::endl;
     // bind listener to port
     if(listener.listen(port) != sf::Socket::Done)
     {
@@ -203,6 +206,7 @@ int main()
 
 
 #ifndef SERVER
+    std::cout << "Attempting to connect to server...\n";
     sf::TcpSocket socket;
     sf::Socket::Status status = socket.connect("msquared169.ddns.net", port);
     sf::Packet packet;
