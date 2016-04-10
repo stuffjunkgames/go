@@ -396,6 +396,7 @@ int main()
 #endif // not SERVER
 }
 
+#ifndef SERVER // don't use any of this if server
 // adds stone to board (if legal)
 // removes any dead stones
 // returns true if move at x,y is legal for player
@@ -526,3 +527,5 @@ void zeroArray(int a[GAME_WIDTH][GAME_HEIGHT])
         }
     }
 }
+
+#endif // SERVER
