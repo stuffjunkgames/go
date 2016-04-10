@@ -16,6 +16,8 @@ const int TILE_SIZE = 50;
 #define GAME_BOTTOM GAME_TOP+GAME_HEIGHT
 
 const int port = 12345;
+
+#ifndef SERVER
 const std::string cornerIntersectionFile = "corner.png";
 const std::string edgeIntersectionFile = "edge.png";
 const std::string intersectionFile = "intersection.png";
@@ -129,6 +131,8 @@ bool isCaptured(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[G
 bool isCapturedHelper(Tile game[GAME_WIDTH][GAME_HEIGHT], int x, int y, int captured[GAME_WIDTH][GAME_HEIGHT], int player);
 void zeroArray(int a[GAME_WIDTH][GAME_HEIGHT]);
 void captureStones(Tile game[GAME_WIDTH][GAME_HEIGHT], int captured[GAME_WIDTH][GAME_HEIGHT]);
+
+#endif // SERVER
 
 int main()
 {
